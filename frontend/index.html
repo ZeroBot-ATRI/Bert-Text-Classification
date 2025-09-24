@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BERT中文文本分类系统</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --border-color: #e5e7eb;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: var(--bg-primary);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px 30px;
+            border-bottom: none;
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--bg-primary);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-online {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-offline {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-color);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .confidence-badge {
+            background: var(--success-color);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .predicted-class {
+            background: var(--primary-color);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .probabilities {
+            margin-top: 20px;
+        }
+
+        .probability-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .probability-item:last-child {
+            border-bottom: none;
+        }
+
+        .probability-label {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .probability-bar {
+            flex: 1;
+            margin: 0 15px;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+
+        .probability-value {
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-color);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            margin-top: 15px;
+        }
+
+        .sample-texts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .sample-text {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sample-text:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .sample-text-content {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .sample-text-category {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: white;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 页面头部 -->
+        <div class="header">
+            <h1>🤖 BERT中文文本分类系统</h1>
+            <p>基于BERT的智能文本分类平台，支持10个类别的中文文本自动分类</p>
+            <div style="margin-top: 15px;">
+                <a href="/admin.html" class="btn btn-primary" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; margin-right: 10px;">⚙️ 管理控制台</a>
+                <a href="/docs" class="btn btn-primary" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none;">📚 API文档</a>
+            </div>
+        </div>
+
+        <!-- 主要功能卡片 -->
+        <div class="main-card">
+            <div class="card-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>📝 文本分类预测</h2>
+                    <div id="statusIndicator" class="status-indicator status-offline">
+                        <div class="status-dot"></div>
+                        <span>检查中...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- 输入表单 -->
+                <form id="predictionForm">
+                    <div class="form-group">
+                        <label class="form-label" for="inputText">
+                            输入要分类的文本内容
+                        </label>
+                        <textarea 
+                            id="inputText" 
+                            class="form-input form-textarea" 
+                            placeholder="请输入中文文本，例如：股市今日大涨，沪深指数均创新高..."
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary" id="predictBtn">
+                            <span>🔍 开始分类</span>
+                        </button>
+                        <button type="button" class="btn btn-primary" id="clearBtn">
+                            <span>🗑️ 清空内容</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- 示例文本 -->
+                <div class="form-group" style="margin-top: 30px;">
+                    <label class="form-label">💡 点击示例文本快速体验</label>
+                    <div class="sample-texts">
+                        <div class="sample-text" data-text="A股市场今日大幅上涨，沪指收盘涨幅超过2%，创业板指数涨幅更是达到3.5%">
+                            <div class="sample-text-content">A股市场今日大幅上涨，沪指收盘涨幅超过2%...</div>
+                            <div class="sample-text-category">预期类别：stocks</div>
+                        </div>
+                        <div class="sample-text" data-text="教育部发布新的高考改革方案，将进一步完善综合素质评价体系">
+                            <div class="sample-text-content">教育部发布新的高考改革方案...</div>
+                            <div class="sample-text-category">预期类别：education</div>
+                        </div>
+                        <div class="sample-text" data-text="中国男篮在亚运会决赛中击败对手，成功卫冕篮球项目金牌">
+                            <div class="sample-text-content">中国男篮在亚运会决赛中击败对手...</div>
+                            <div class="sample-text-category">预期类别：sports</div>
+                        </div>
+                        <div class="sample-text" data-text="房地产市场调控政策进一步收紧，多个城市出台限购限贷新措施">
+                            <div class="sample-text-content">房地产市场调控政策进一步收紧...</div>
+                            <div class="sample-text-category">预期类别：realty</div>
+                        </div>
+                        <div class="sample-text" data-text="王者荣耀新英雄上线，游戏平衡性调整引发玩家热议">
+                            <div class="sample-text-content">王者荣耀新英雄上线，游戏平衡性调整...</div>
+                            <div class="sample-text-category">预期类别：game</div>
+                        </div>
+                        <div class="sample-text" data-text="著名演员获得金马奖最佳男主角，新电影即将上映">
+                            <div class="sample-text-content">著名演员获得金马奖最佳男主角...</div>
+                            <div class="sample-text-category">预期类别：entertainment</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 预测结果 -->
+                <div id="resultSection" class="result-section">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h3 class="result-title">📊 分类结果</h3>
+                            <div id="confidenceBadge" class="confidence-badge">置信度: --</div>
+                        </div>
+                        
+                        <div id="predictedClass" class="predicted-class">
+                            预测类别: --
+                        </div>
+                        
+                        <div class="probabilities">
+                            <h4 style="margin-bottom: 15px; color: var(--text-primary);">📈 各类别概率分布</h4>
+                            <div id="probabilitiesList"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 错误信息 -->
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- 页面底部 -->
+        <div class="footer">
+            <p>⚡ Powered by BERT + FastAPI | 🚀 基于深度学习的智能文本分类</p>
+        </div>
+    </div>
+
+    <script>
+        // API配置
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        
+        // DOM元素
+        const form = document.getElementById('predictionForm');
+        const inputText = document.getElementById('inputText');
+        const predictBtn = document.getElementById('predictBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const resultSection = document.getElementById('resultSection');
+        const confidenceBadge = document.getElementById('confidenceBadge');
+        const predictedClass = document.getElementById('predictedClass');
+        const probabilitiesList = document.getElementById('probabilitiesList');
+        const errorMessage = document.getElementById('errorMessage');
+        const sampleTexts = document.querySelectorAll('.sample-text');
+
+        // 类别中文映射
+        const categoryNames = {
+            'finance': '💰 金融财经',
+            'realty': '🏠 房地产',
+            'stocks': '📈 股票证券',
+            'education': '🎓 教育培训',
+            'science': '🔬 科学技术',
+            'society': '👥 社会民生',
+            'politics': '🏛️ 政治时事',
+            'sports': '⚽ 体育运动',
+            'game': '🎮 游戏娱乐',
+            'entertainment': '🎬 影视娱乐'
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPIStatus();
+            setupEventListeners();
+        });
+
+        // 检查API状态
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatusIndicator(true, data.model_loaded);
+                } else {
+                    updateStatusIndicator(false);
+                }
+            } catch (error) {
+                updateStatusIndicator(false);
+            }
+        }
+
+        // 更新状态指示器
+        function updateStatusIndicator(isOnline, modelLoaded = false) {
+            const indicator = statusIndicator;
+            if (isOnline && modelLoaded) {
+                indicator.className = 'status-indicator status-online';
+                indicator.querySelector('span').textContent = '服务正常';
+                predictBtn.disabled = false;
+            } else {
+                indicator.className = 'status-indicator status-offline';
+                indicator.querySelector('span').textContent = isOnline ? '模型未加载' : '服务离线';
+                predictBtn.disabled = !isOnline;
+            }
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 表单提交
+            form.addEventListener('submit', handleSubmit);
+            
+            // 清空按钮
+            clearBtn.addEventListener('click', clearForm);
+            
+            // 示例文本点击
+            sampleTexts.forEach(sampleText => {
+                sampleText.addEventListener('click', function() {
+                    const text = this.dataset.text;
+                    inputText.value = text;
+                    inputText.focus();
+                });
+            });
+
+            // 定期检查API状态
+            setInterval(checkAPIStatus, 30000);
+        }
+
+        // 处理表单提交
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const text = inputText.value.trim();
+            if (!text) {
+                showError('请输入要分类的文本内容');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            hideResult();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                displayResult(data);
+                
+            } catch (error) {
+                console.error('预测失败:', error);
+                showError(`预测失败: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 显示加载状态
+        function showLoading(loading) {
+            if (loading) {
+                predictBtn.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>分析中...</span>
+                    </div>
+                `;
+                predictBtn.disabled = true;
+            } else {
+                predictBtn.innerHTML = '<span>🔍 开始分类</span>';
+                predictBtn.disabled = false;
+            }
+        }
+
+        // 显示预测结果
+        function displayResult(data) {
+            // 更新主要结果
+            const categoryDisplayName = categoryNames[data.predicted_class] || data.predicted_class;
+            predictedClass.textContent = `预测类别: ${categoryDisplayName}`;
+            confidenceBadge.textContent = `置信度: ${(data.confidence * 100).toFixed(1)}%`;
+            
+            // 根据置信度设置颜色
+            const confidence = data.confidence;
+            if (confidence >= 0.8) {
+                confidenceBadge.style.background = 'var(--success-color)';
+            } else if (confidence >= 0.6) {
+                confidenceBadge.style.background = 'var(--warning-color)';
+            } else {
+                confidenceBadge.style.background = 'var(--error-color)';
+            }
+
+            // 显示概率分布
+            if (data.probabilities) {
+                displayProbabilities(data.probabilities);
+            }
+
+            // 显示结果区域
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // 显示概率分布
+        function displayProbabilities(probabilities) {
+            // 按概率排序
+            const sortedProbs = Object.entries(probabilities)
+                .sort(([,a], [,b]) => b - a);
+
+            probabilitiesList.innerHTML = sortedProbs.map(([category, prob]) => {
+                const displayName = categoryNames[category] || category;
+                const percentage = (prob * 100).toFixed(1);
+                
+                return `
+                    <div class="probability-item">
+                        <div class="probability-label">${displayName}</div>
+                        <div class="probability-bar">
+                            <div class="probability-fill" style="width: ${percentage}%"></div>
+                        </div>
+                        <div class="probability-value">${percentage}%</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 清空表单
+        function clearForm() {
+            inputText.value = '';
+            hideResult();
+            hideError();
+            inputText.focus();
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // 隐藏错误信息
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // 隐藏结果
+        function hideResult() {
+            resultSection.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

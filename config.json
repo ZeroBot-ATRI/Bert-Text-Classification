@@ -1,0 +1,21 @@
+{
+  "model_type": "bert_classifier",
+  "pretrain_dir": "pretrain/bert-base-chinese",
+  "num_classes": 10,
+  "dropout_rate": 0.1,
+  "freeze_bert": false,
+  "hidden_size": 768,
+  "use_pooler": true,
+  "hidden_dims": null,
+  "activation": "relu",
+  "learning_rate": 2e-5,
+  "weight_decay": 0.01,
+  "warmup_steps": 500,
+  "max_grad_norm": 1.0,
+  "label_smoothing": 0.0,
+  "num_epochs": 10,
+  "patience": 5,
+  "min_delta": 0.001,
+  "save_every": 2,
+  "max_length": 512
+}
