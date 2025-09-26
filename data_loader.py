@@ -230,7 +230,7 @@ class DataLoader_Manager:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True
-        )
+        ) if train_dataset else None
         
         val_loader = DataLoader(
             val_dataset,
@@ -246,7 +246,7 @@ class DataLoader_Manager:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True
-        )
+        ) if test_dataset else None
         
         return train_loader, val_loader, test_loader
     
@@ -305,9 +305,10 @@ if __name__ == "__main__":
     )
     
     # 测试数据加载
-    for batch in train_loader:
-        print("样本批次形状:")
-        print(f"  input_ids: {batch['input_ids'].shape}")
-        print(f"  attention_mask: {batch['attention_mask'].shape}")
-        print(f"  labels: {batch['labels'].shape}")
-        break
+    if train_loader:
+        for batch in train_loader:
+            print("样本批次形状:")
+            print(f"  input_ids: {batch['input_ids'].shape}")
+            print(f"  attention_mask: {batch['attention_mask'].shape}")
+            print(f"  labels: {batch['labels'].shape}")
+            break
